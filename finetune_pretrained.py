@@ -6,7 +6,7 @@ from sklearn.preprocessing import LabelEncoder
 from utils.load_datasets import load_MR, load_Semeval2017A
 
 
-DATASET = 'MR'  # 'MR' or 'Semeval2017A'
+DATASET = 'Semeval2017A'  # 'MR' or 'Semeval2017A'
 PRETRAINED_MODEL = 'bert-base-cased'
 
 

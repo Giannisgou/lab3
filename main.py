@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import accuracy_score, f1_score, recall_score
 from early_stopper import EarlyStopper
 warnings.filterwarnings("ignore", category=UndefinedMetricWarning)
-
+from attention import SimpleSelfAttentionModel, MultiHeadAttentionModel, TransformerEncoderModel
 ########################################################
 # Configuration
 ########################################################
@@ -118,14 +118,41 @@ test_loader = DataLoader(test_set, batch_size=BATCH_SIZE, shuffle=True)
 #############################################################################
 # Model Definition (Model, Loss Function, Optimizer)
 #############################################################################
-'''
-model = BaselineDNN(output_size=3,  # EX8 #################################### 2 for MR, 3 for Semeval2017A
+
+model1 = BaselineDNN(output_size=3,  # EX8 #################################### 2 for MR, 3 for Semeval2017A
                     embeddings=embeddings,
                     trainable_emb=EMB_TRAINABLE)
-'''
-model = LSTM(output_size = 3, 
+
+model2 = LSTM(output_size = 3, 
              embeddings=embeddings,
              trainable_emb=EMB_TRAINABLE)
+
+model3 = LSTM(output_size = 3,
+                embeddings=embeddings,
+                trainable_emb=EMB_TRAINABLE,
+                bidirectional=True)
+
+model4 = SimpleSelfAttentionModel(
+    output_size = n_classes,     # 2 για MR, 3 για Semeval2017A
+    embeddings  = embeddings,
+    max_length  = train_set.max_length
+)
+
+model5 = MultiHeadAttentionModel(
+    output_size = n_classes,     # 2 για MR, 3 για Semeval2017A
+    embeddings  = embeddings,
+    max_length  = train_set.max_length,
+    n_head      = 4
+)
+
+model6 = TransformerEncoderModel(
+    output_size = n_classes,     # 2 για MR, 3 για Semeval2017A
+    embeddings  = embeddings,
+    max_length  = train_set.max_length,
+    n_head      = 4,
+)
+
+model = model6
 # move the mode weight to cpu or gpu
 model.to(DEVICE)
 print(model)
@@ -144,6 +171,7 @@ optimizer = torch.optim.Adam(parameters, lr=0.001)
 TRAIN_LOSS = []
 TEST_LOSS = []
 VAL_LOSS = []
+stopped = False
 for epoch in range(1, EPOCHS + 1):
     '''
     # train the model for one epoch
@@ -172,6 +200,7 @@ for epoch in range(1, EPOCHS + 1):
     # 3c. Ελέγχουμε αν πρέπει να διακόψουμε πρόωρα
     if early_stopper.early_stop(val_loss):
         print(f"Early stopping at epoch {epoch}. Validation loss has not improved for {early_stopper.patience} epochs.")
+        stopped = True
         break
 
 
@@ -187,27 +216,29 @@ for epoch in range(1, EPOCHS + 1):
     val_y_true = np.concatenate(val_y_true, axis=0)
     val_y_pred = np.concatenate(val_y_pred, axis=0)
 # Compute metrics using sklearn functions:
-print("Train loss:" , train_loss)
-print("Validation loss:" , val_loss)
-print("Test loss:", test_loss)
+if stopped == False:
+    print("Train loss:" , train_loss)
+    print("Validation loss:" , val_loss)
+    print("Test loss:", test_loss)
 
-print("Train accuracy:" , accuracy_score(y_train_true, y_train_pred))
-print("Validation accuracy:" , accuracy_score(val_y_true, val_y_pred))
-print("Test accuracy:" , accuracy_score(y_test_true, y_test_pred))
+    print("Train accuracy:" , accuracy_score(y_train_true, y_train_pred))
+    print("Validation accuracy:" , accuracy_score(val_y_true, val_y_pred))
+    print("Test accuracy:" , accuracy_score(y_test_true, y_test_pred))
 
-print("Train F1 score:", f1_score(y_train_true, y_train_pred, average='macro'))
-print("Validation F1 score:", f1_score(val_y_true, val_y_pred, average='macro'))
-print("Test F1 score:", f1_score(y_test_true, y_test_pred, average='macro'))
+    print("Train F1 score:", f1_score(y_train_true, y_train_pred, average='macro'))
+    print("Validation F1 score:", f1_score(val_y_true, val_y_pred, average='macro'))
+    print("Test F1 score:", f1_score(y_test_true, y_test_pred, average='macro'))
 
-print("Train Recall:", recall_score(y_train_true, y_train_pred, average='macro'))
-print("Validation Recall:", recall_score(val_y_true, val_y_pred, average='macro'))
-print("Test Recall:", recall_score(y_test_true, y_test_pred, average='macro'))
+    print("Train Recall:", recall_score(y_train_true, y_train_pred, average='macro'))
+    print("Validation Recall:", recall_score(val_y_true, val_y_pred, average='macro'))
+    print("Test Recall:", recall_score(y_test_true, y_test_pred, average='macro'))
 # plot training and validation loss curves
     
-plt.plot(range(1, EPOCHS + 1), TRAIN_LOSS, label='Training Loss')
-plt.plot(range(1, EPOCHS + 1), TEST_LOSS, label='Test Loss')
+plt.plot(range(1, len(TRAIN_LOSS) + 1), TRAIN_LOSS, label='Training Loss')
+plt.plot(range(1, len(TEST_LOSS) + 1), TEST_LOSS, label='Test Loss')
 plt.xlabel('Epoch')
 plt.ylabel('Loss')
 plt.title('Training and Test Loss')
 plt.legend()
 plt.show()
+
